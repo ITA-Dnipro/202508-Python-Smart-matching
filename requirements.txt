@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+psycopg2-binary
+SQLAlchemy
+redis
+python-dotenv
+numpy
+pydantic
+fastembed
+qdrant-client
