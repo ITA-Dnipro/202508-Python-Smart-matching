@@ -1,14 +1,15 @@
-# app/main.py
 from fastapi import FastAPI
-from app.api.routes import router
-from app.services.db import init_db
+import logging
+from .api.routes import router as api_router
+from .core.lifespan import lifespan
 
-app = FastAPI(title="Smart Matcher Service")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-@app.on_event("startup")
-def on_startup():
-    # ініціалізація БД/схеми, якщо потрібно
-    init_db()
+app = FastAPI(title="SmartMatching Service", lifespan=lifespan)
 
-# підключаємо роутери
-app.include_router(router)
+app.include_router(api_router, prefix="/api/smart-matching")
+
+@app.get("/")
+def root():
+    return {"message": "SmartMatching Service is running"}
