@@ -16,13 +16,13 @@ def health():
 
 
 @router.post("/search", response_model=list[MatchResult])
-def find_matches(request: InvestorSearchRequest, authorization: str | None = Header(None)) -> list[MatchResult]:
+async def find_matches(request: InvestorSearchRequest, authorization: str | None = Header(None)) -> list[MatchResult]:
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header is missing")
     if not request.investor_id:
         raise HTTPException(status_code=400, detail="investor_id is required")
     try:
-        results = find_matches_for_investor(
+        results = await find_matches_for_investor(
             investor_id=request.investor_id,
             top_k=request.top_k,
             authorization = authorization
@@ -35,4 +35,3 @@ def find_matches(request: InvestorSearchRequest, authorization: str | None = Hea
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Search Error")
-    return results

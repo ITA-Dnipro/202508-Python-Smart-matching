@@ -1,5 +1,6 @@
 import httpx
 import os
+import asyncio
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from .embeddings import embed_text
@@ -13,27 +14,28 @@ if not USER_SERVICE_URL:
     raise EnvironmentError("USER_SERVICE_URL is not set in .env")
 
 
-def fetch_investor_profile_text(investor_id: str, authorization: str) -> str:
+async def fetch_investor_profile_text(investor_id: int, authorization: str) -> str:
     """
         Fetches an investor's text profile (industry name) from the monolith API.
     """
     headers = {"Authorization": authorization}
     url_profile = f"{USER_SERVICE_URL}/api/profiles/investor-profiles/{investor_id}/"
+    investment_focus_id = None
 
     try:
-        with httpx.Client(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
 
-            response_profile = client.get(url_profile, headers=headers)
+            response_profile = await client.get(url_profile, headers=headers)
             response_profile.raise_for_status()
 
             profile_data = response_profile.json()
             investment_focus_id = profile_data.get("investment_focus")
 
             if investment_focus_id is None:
-                raise UserNotFoundException(f"Investor {investor_id} found, but has no 'investment_focus' ID.")
+                raise MonolithServiceException(f"Investor {investor_id} found, but has no 'investment_focus' ID.")
 
             url_industry = f"{USER_SERVICE_URL}/api/profiles/industries/{investment_focus_id}/"
-            response_industry = client.get(url_industry, headers=headers)
+            response_industry = await client.get(url_industry, headers=headers)
             response_industry.raise_for_status()
 
             industry_data = response_industry.json()
@@ -63,6 +65,9 @@ def perform_search_by_text(text: str, top_k: int) -> list[MatchResult]:
     """
         Performs a semantic vector search for startups based on a query text.
     """
+    if app_state.startup_vectors is None:
+        raise MonolithServiceException("Startup vectors not initialized. Check server logs.")
+
     investor_vector = embed_text(text)
     investor_vector_2d = investor_vector.reshape(1, -1)
 
@@ -84,11 +89,11 @@ def perform_search_by_text(text: str, top_k: int) -> list[MatchResult]:
     return sorted_results[:top_k]
 
 
-def find_matches_for_investor(investor_id: str, top_k: int, authorization: str) -> list[MatchResult]:
+async def find_matches_for_investor(investor_id: int, top_k: int, authorization: str) -> list[MatchResult]:
     """
         Orchestrates the search: fetches investor text and finds matching startups.
     """
-    investor_focus_text = fetch_investor_profile_text(investor_id = investor_id,
+    investor_focus_text = await fetch_investor_profile_text(investor_id = investor_id,
                                                       authorization=authorization)
 
     results = perform_search_by_text(
