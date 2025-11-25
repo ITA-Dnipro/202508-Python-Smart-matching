@@ -17,12 +17,14 @@ def upsert_startups(vectors: list, payloads: list[dict]):
         raise Exception("Database client not initialized")
 
     points = []
-    for i, payload in enumerate(payloads):
-        points.append(PointStruct(
-            id=i,
-            vector=vectors[i].tolist(),
-            payload=payload
-        ))
+    for payload, vector in zip(payloads, vectors):
+        points.append(
+            PointStruct(
+                id=payload["id"],
+                vector=vector.tolist(),
+                payload=payload,
+            )
+        )
 
     client.upsert(collection_name=COLLECTION_NAME, points=points)
 
