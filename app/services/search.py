@@ -2,12 +2,11 @@ import httpx
 import os
 import asyncio
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from .embeddings import embed_text
 from ..api.schema import MatchResult
-from ..static_data import STATIC_STARTUPS
 from ..core.exceptions import UserNotFoundException, MonolithServiceException
 from ..core.state import app_state
+from .vector_db import search_similar_startups
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL")
 if not USER_SERVICE_URL:
@@ -62,31 +61,8 @@ async def fetch_investor_profile_text(investor_id: int, authorization: str) -> s
 
 
 def perform_search_by_text(text: str, top_k: int) -> list[MatchResult]:
-    """
-        Performs a semantic vector search for startups based on a query text.
-    """
-    if app_state.startup_vectors is None:
-        raise MonolithServiceException("Startup vectors not initialized. Check server logs.")
-
-    investor_vector = embed_text(text)
-    investor_vector_2d = investor_vector.reshape(1, -1)
-
-    sim_scores = cosine_similarity(investor_vector_2d, app_state.startup_vectors)
-    scores = sim_scores[0]
-
-    results = []
-    for i, score in enumerate(scores):
-        results.append(
-            MatchResult(
-                startup_id=STATIC_STARTUPS[i]['id'],
-                startup_name=STATIC_STARTUPS[i]['name'],
-                startup_description=STATIC_STARTUPS[i]['description'],
-                similarity_score=round(float(score), 4)
-            )
-        )
-
-    sorted_results = sorted(results, key=lambda r: r.similarity_score, reverse=True)
-    return sorted_results[:top_k]
+    query_vector = embed_text(text).tolist()
+    return search_similar_startups(query_vector, top_k)
 
 
 async def find_matches_for_investor(investor_id: int, top_k: int, authorization: str) -> list[MatchResult]:

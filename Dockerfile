@@ -22,4 +22,7 @@ EXPOSE 8003
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
   CMD curl -fsS http://localhost:8003/health || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]
+COPY run.sh /app/run.sh
+RUN chmod +x /app/run.sh
+
+CMD ["/app/run.sh"]
