@@ -8,4 +8,5 @@ numpy
 pydantic
 fastembed
 qdrant-client
-scikit-learn
+celery
+
